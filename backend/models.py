@@ -107,16 +107,21 @@ class ProductParameter(models.Model):
         ProductInfo,
         verbose_name="Информация о продукте",
         related_name="product_parameters",
+        on_delete=models.CASCADE
     )
     parameter = models.ForeignKey(
-        Parameter, verbose_name="Параметр", related_name="product_parameters"
+        Parameter, verbose_name="Параметр", related_name="product_parameters", on_delete=models.CASCADE
     )
     value = models.CharField(verbose_name="Значение", max_length=100)
 
     class Meta:
         verbose_name = "Параметр"
         verbose_name_plural = "Список параметров"
-        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product_info", "parameter"], name="unique_product_parameter"
+            ),
+        ]
 
     def __str__(self):
         return f"{self.parameter.name}: {self.value}"
@@ -139,3 +144,42 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.user}: {self.value}"
+
+
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders", verbose_name='Пользователь')
+    dt = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=36, verbose_name='Статус')
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Список заказов"
+        ordering = ["-dt"]
+
+    def __str__(self):
+        return f"{self.user}:{self.status}"
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name="ordered_items", verbose_name="Заказ"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="ordered_items",
+        verbose_name="Продукт",
+    )
+    shop = models.ForeignKey(
+        Shop, on_delete=models.CASCADE, related_name="ordered_items"
+    )
+    quantity = models.PositiveIntegerField(verbose_name="Количество")
+
+    class Meta:
+        verbose_name = "Заказанная позиция"
+        verbose_name_plural = "Список заказанных позиций"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order", "product"], name="unique_order_item"
+            ),
+        ]
