@@ -107,10 +107,13 @@ class ProductParameter(models.Model):
         ProductInfo,
         verbose_name="Информация о продукте",
         related_name="product_parameters",
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
     parameter = models.ForeignKey(
-        Parameter, verbose_name="Параметр", related_name="product_parameters", on_delete=models.CASCADE
+        Parameter,
+        verbose_name="Параметр",
+        related_name="product_parameters",
+        on_delete=models.CASCADE,
     )
     value = models.CharField(verbose_name="Значение", max_length=100)
 
@@ -147,9 +150,14 @@ class Contact(models.Model):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders", verbose_name='Пользователь')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        verbose_name="Пользователь",
+    )
     dt = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=36, verbose_name='Статус')
+    status = models.CharField(max_length=36, verbose_name="Статус")
 
     class Meta:
         verbose_name = "Заказ"
@@ -162,7 +170,10 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
-        Order, on_delete=models.CASCADE, related_name="ordered_items", verbose_name="Заказ"
+        Order,
+        on_delete=models.CASCADE,
+        related_name="ordered_items",
+        verbose_name="Заказ",
     )
     product = models.ForeignKey(
         Product,
