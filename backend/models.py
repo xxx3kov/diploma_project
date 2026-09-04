@@ -43,7 +43,7 @@ class Product(models.Model):
         on_delete=models.CASCADE,
         related_name="products",
     )
-    name = models.CharField(verbose_name="Название")
+    name = models.CharField(verbose_name="Название", max_length=50)
 
     class Meta:
         verbose_name = "Продукт"
@@ -67,7 +67,7 @@ class ProductInfo(models.Model):
         on_delete=models.CASCADE,
         related_name="product_infos",
     )
-    name = models.CharField(verbose_name="Имя")
+    name = models.CharField(verbose_name="Имя", max_length=50)
     quantity = models.PositiveIntegerField(verbose_name="Количество")
     price = models.DecimalField(
         verbose_name="Стоимость", max_digits=10, decimal_places=2
@@ -91,7 +91,7 @@ class ProductInfo(models.Model):
 
 
 class Parameter(models.Model):
-    name = models.CharField(verbose_name="Название")
+    name = models.CharField(verbose_name="Название", max_length=50)
 
     class Meta:
         verbose_name = "Имя параметра"
@@ -120,3 +120,22 @@ class ProductParameter(models.Model):
 
     def __str__(self):
         return f"{self.parameter.name}: {self.value}"
+
+
+class Contact(models.Model):
+    type = models.CharField(verbose_name="Тип связи", max_length=50)
+    user = models.ForeignKey(
+        User,
+        verbose_name="Пользователь",
+        related_name="contacts",
+        on_delete=models.CASCADE,
+    )
+    value = models.CharField(verbose_name="Адрес/телефон/mail", max_length=100)
+
+    class Meta:
+        verbose_name = "Контакт"
+        verbose_name_plural = "Список контактов"
+        ordering = ["type"]
+
+    def __str__(self):
+        return f"{self.user}: {self.value}"
