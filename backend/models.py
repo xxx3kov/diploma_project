@@ -5,10 +5,12 @@ from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
+    """Пользователь сервиса."""
     pass
 
 
 class Shop(models.Model):
+    """Магазин-поставщик товаров."""
     name = models.CharField(verbose_name="Наименование", max_length=50, unique=True)
     url = models.URLField(verbose_name="Ссылка")
 
@@ -22,6 +24,7 @@ class Shop(models.Model):
 
 
 class Category(models.Model):
+    """Категория товаров."""
     shops = models.ManyToManyField(
         Shop, verbose_name="Магазины", related_name="categories"
     )
@@ -37,6 +40,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    """Товар."""
     category = models.ForeignKey(
         Category,
         verbose_name="Категория",
@@ -55,6 +59,7 @@ class Product(models.Model):
 
 
 class ProductInfo(models.Model):
+    """Информация о товаре у конкретного магазина."""
     product = models.ForeignKey(
         Product,
         verbose_name="Продукт",
@@ -91,6 +96,7 @@ class ProductInfo(models.Model):
 
 
 class Parameter(models.Model):
+    """Характеристика товара."""
     name = models.CharField(verbose_name="Название", max_length=50)
 
     class Meta:
@@ -103,6 +109,7 @@ class Parameter(models.Model):
 
 
 class ProductParameter(models.Model):
+    """Значение характеристики конкретной товарной позиции."""
     product_info = models.ForeignKey(
         ProductInfo,
         verbose_name="Информация о продукте",
@@ -131,6 +138,7 @@ class ProductParameter(models.Model):
 
 
 class Contact(models.Model):
+    """Контактная информация пользователя."""
     type = models.CharField(verbose_name="Тип связи", max_length=50)
     user = models.ForeignKey(
         User,
@@ -150,6 +158,7 @@ class Contact(models.Model):
 
 
 class Order(models.Model):
+    """Заказ пользователя."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -181,6 +190,7 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    """Отдельная товарная позиция внутри заказа."""
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
