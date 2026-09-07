@@ -23,7 +23,8 @@ class PartnerUpdateView(APIView):
 
                     for category_data in data["categories"]:
                         category, _ = Category.objects.update_or_create(
-                            name=category_data["name"]
+                            id=category_data["id"],
+                            defaults={"name": category_data["name"]},
                         )
                         category.shops.add(shop)
 
