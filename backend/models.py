@@ -43,7 +43,7 @@ class Product(models.Model):
         on_delete=models.CASCADE,
         related_name="products",
     )
-    name = models.CharField(verbose_name="Название", max_length=50)
+    name = models.CharField(verbose_name="Название", max_length=255)
 
     class Meta:
         verbose_name = "Продукт"
@@ -67,7 +67,7 @@ class ProductInfo(models.Model):
         on_delete=models.CASCADE,
         related_name="product_infos",
     )
-    name = models.CharField(verbose_name="Имя", max_length=50)
+    name = models.CharField(verbose_name="Имя", max_length=255)
     quantity = models.PositiveIntegerField(verbose_name="Количество")
     price = models.DecimalField(
         verbose_name="Стоимость", max_digits=10, decimal_places=2
