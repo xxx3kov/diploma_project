@@ -34,3 +34,5 @@ dist/
 
 # Jupyter
 .ipynb_checkpoints/
+
+db.sqlite3
