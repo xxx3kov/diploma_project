@@ -157,7 +157,19 @@ class Order(models.Model):
         verbose_name="Пользователь",
     )
     dt = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=36, verbose_name="Статус")
+
+    class Status(models.TextChoices):
+        NEW = "new", "Новый"
+        CONFIRMED = "confirmed", "Подтверждён"
+        SHIPPED = "shipped", "Отправлен"
+        DELIVERED = "delivered", "Доставлен"
+        CANCELLED = "cancelled", "Отменён"
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NEW,
+    )
 
     class Meta:
         verbose_name = "Заказ"
