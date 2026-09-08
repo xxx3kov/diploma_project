@@ -1,16 +1,59 @@
+from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
 
 
+class UserManager(BaseUserManager):
+    """
+    Миксин для управления пользователями
+    """
+
+    use_in_migrations = True
+
+    def _create_user(self, email, password, **extra_fields):
+        """
+        Create and save a user with the given username, email, and password.
+        """
+        if not email:
+            raise ValueError("Email должен быть указан")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self._create_user(email, password, **extra_fields)
+
+
 class User(AbstractUser):
     """Пользователь сервиса."""
-    pass
+
+    username = None
+    email = models.EmailField(unique=True)
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+    objects = UserManager()
 
 
 class Shop(models.Model):
     """Магазин-поставщик товаров."""
+
     name = models.CharField(verbose_name="Наименование", max_length=50, unique=True)
     url = models.URLField(verbose_name="Ссылка")
 
@@ -25,6 +68,7 @@ class Shop(models.Model):
 
 class Category(models.Model):
     """Категория товаров."""
+
     shops = models.ManyToManyField(
         Shop, verbose_name="Магазины", related_name="categories"
     )
@@ -41,6 +85,7 @@ class Category(models.Model):
 
 class Product(models.Model):
     """Товар."""
+
     category = models.ForeignKey(
         Category,
         verbose_name="Категория",
@@ -60,6 +105,7 @@ class Product(models.Model):
 
 class ProductInfo(models.Model):
     """Информация о товаре у конкретного магазина."""
+
     product = models.ForeignKey(
         Product,
         verbose_name="Продукт",
@@ -97,6 +143,7 @@ class ProductInfo(models.Model):
 
 class Parameter(models.Model):
     """Характеристика товара."""
+
     name = models.CharField(verbose_name="Название", max_length=50)
 
     class Meta:
@@ -110,6 +157,7 @@ class Parameter(models.Model):
 
 class ProductParameter(models.Model):
     """Значение характеристики конкретной товарной позиции."""
+
     product_info = models.ForeignKey(
         ProductInfo,
         verbose_name="Информация о продукте",
@@ -139,6 +187,7 @@ class ProductParameter(models.Model):
 
 class Contact(models.Model):
     """Контактная информация пользователя."""
+
     type = models.CharField(verbose_name="Тип связи", max_length=50)
     user = models.ForeignKey(
         User,
@@ -159,6 +208,7 @@ class Contact(models.Model):
 
 class Order(models.Model):
     """Заказ пользователя."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -191,6 +241,7 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     """Отдельная товарная позиция внутри заказа."""
+
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
