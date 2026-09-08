@@ -1,5 +1,7 @@
+from django.contrib.auth import authenticate
 from django.db import transaction
 from django.http import JsonResponse
+from rest_framework.authtoken.models import Token
 from rest_framework.generics import CreateAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -65,4 +67,28 @@ class PartnerUpdateView(APIView):
 
 class RegisterAccountView(CreateAPIView):
     serializer_class = UserSerializer
-    permission_classes=(AllowAny, )
+    permission_classes = (AllowAny,)
+
+
+class LoginAccountView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+
+        if not email or not password:
+            return JsonResponse(
+                {"Status": False, "Errors": "Нужно заполнить все поля"}, status=400
+            )
+
+        user = authenticate(request, email=email, password=password)
+        if user is not None:
+            token, _ = Token.objects.get_or_create(user=user)
+            print("Email из запроса:", email)
+            print("Пароль из запроса:", password)
+            print("Что вернул authenticate:", user)
+            return JsonResponse({"Status": True, "Token": token.key})
+        return JsonResponse(
+            {"Status": False, "Errors": "Неверный логин или пароль"}, status=403
+        )
