@@ -31,3 +31,23 @@ class UserSerializer(serializers.ModelSerializer):
         # Автоматически хэширует пароль
         user = User.objects.create_user(**validated_data)
         return user
+
+
+# Сериализатор характеристик
+class ProductParameterSerializer(serializers.ModelSerializer):
+    parameter = serializers.StringRelatedField()
+
+    class Meta:
+        model = ProductParameter
+        fields = ["parameter", "value"]
+
+
+# Сериализатор информации продукта
+class ProductInfoSerializer(serializers.ModelSerializer):
+    product_parameters = ProductParameterSerializer(read_only=True, many=True)
+    shop = serializers.StringRelatedField()
+    product = serializers.StringRelatedField()
+
+    class Meta:
+        model = ProductInfo
+        fields = ["name", "quantity", "price", "shop", "product", "product_parameters"]
