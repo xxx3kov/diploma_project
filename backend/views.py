@@ -1,6 +1,8 @@
 from django.db import transaction
 from django.http import JsonResponse
+from rest_framework.generics import CreateAPIView
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 import yaml
 
 from backend.models import (
@@ -10,7 +12,9 @@ from backend.models import (
     ProductInfo,
     ProductParameter,
     Shop,
+    User,
 )
+from backend.serializers import UserSerializer
 
 
 class PartnerUpdateView(APIView):
@@ -57,3 +61,8 @@ class PartnerUpdateView(APIView):
 
         except Exception as e:
             return JsonResponse({"Status": False, "Errors": str(e)}, status=400)
+
+
+class RegisterAccountView(CreateAPIView):
+    serializer_class = UserSerializer
+    permission_classes=(AllowAny, )
