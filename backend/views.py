@@ -1,8 +1,10 @@
 from django.contrib.auth import authenticate
 from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
-from rest_framework.generics import CreateAPIView
+from rest_framework.filters import SearchFilter
+from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 import yaml
@@ -16,7 +18,7 @@ from backend.models import (
     Shop,
     User,
 )
-from backend.serializers import UserSerializer
+from backend.serializers import ProductInfoSerializer, UserSerializer
 
 
 class PartnerUpdateView(APIView):
@@ -92,3 +94,12 @@ class LoginAccountView(APIView):
         return JsonResponse(
             {"Status": False, "Errors": "Неверный логин или пароль"}, status=403
         )
+
+
+class ProductInfoView(ListAPIView):
+    serializer_class = ProductInfoSerializer
+    permission_classes = (AllowAny,)
+    queryset = ProductInfo.objects.all()
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["name", "product__name", "shop__name"]
+    filterset_fields = ["shop_id", "product__category_id"]
