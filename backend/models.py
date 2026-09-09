@@ -93,6 +93,11 @@ class Product(models.Model):
         related_name="products",
     )
     name = models.CharField(verbose_name="Название", max_length=255)
+    description = models.TextField(
+        verbose_name="Описание",
+        blank=True,
+        default="",
+    )
 
     class Meta:
         verbose_name = "Продукт"
@@ -188,22 +193,74 @@ class ProductParameter(models.Model):
 class Contact(models.Model):
     """Контактная информация пользователя."""
 
-    type = models.CharField(verbose_name="Тип связи", max_length=50)
     user = models.ForeignKey(
         User,
         verbose_name="Пользователь",
         related_name="contacts",
         on_delete=models.CASCADE,
     )
-    value = models.CharField(verbose_name="Адрес/телефон/mail", max_length=100)
+
+    last_name = models.CharField(
+        verbose_name="Фамилия",
+        max_length=100,
+    )
+    first_name = models.CharField(
+        verbose_name="Имя",
+        max_length=100,
+    )
+    middle_name = models.CharField(
+        verbose_name="Отчество",
+        max_length=100,
+        blank=True,
+    )
+
+    email = models.EmailField(
+        verbose_name="Email",
+    )
+    phone = models.CharField(
+        verbose_name="Телефон",
+        max_length=30,
+    )
+
+    address = models.CharField(
+        verbose_name="Адрес",
+        max_length=255,
+    )
+    city = models.CharField(
+        verbose_name="Город",
+        max_length=100,
+    )
+    street = models.CharField(
+        verbose_name="Улица",
+        max_length=100,
+    )
+    house = models.CharField(
+        verbose_name="Дом",
+        max_length=20,
+    )
+    building = models.CharField(
+        verbose_name="Корпус",
+        max_length=20,
+        blank=True,
+    )
+    structure = models.CharField(
+        verbose_name="Строение",
+        max_length=20,
+        blank=True,
+    )
+    apartment = models.CharField(
+        verbose_name="Квартира",
+        max_length=20,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "Контакт"
         verbose_name_plural = "Список контактов"
-        ordering = ["type"]
+        ordering = ["last_name", "first_name"]
 
     def __str__(self):
-        return f"{self.user}: {self.value}"
+        return f"{self.last_name} {self.first_name}"
 
 
 class Order(models.Model):
@@ -215,6 +272,16 @@ class Order(models.Model):
         related_name="orders",
         verbose_name="Пользователь",
     )
+
+    contact = models.ForeignKey(
+        Contact,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name="Контакт",
+    )
+
     dt = models.DateTimeField(auto_now_add=True)
 
     class Status(models.TextChoices):
