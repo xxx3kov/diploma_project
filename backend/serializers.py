@@ -61,6 +61,7 @@ class ProductInfoSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "shop",
+            "product",
             "product_parameters",
             "price",
             "quantity",
@@ -79,7 +80,14 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ["product", "shop", "price", "quantity", "total_sum"]
 
     def get_price(self, obj):
-        return ProductInfo.objects.get(shop=obj.shop, product=obj.product).price
+        return (
+            ProductInfo.objects.filter(
+                shop=obj.shop,
+                product=obj.product,
+            )
+            .first()
+            .price
+        )
 
     def get_total_sum(self, obj):
         return self.get_price(obj) * obj.quantity
