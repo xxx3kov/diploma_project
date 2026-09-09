@@ -69,3 +69,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     def get_total_sum(self, obj):
         return self.get_price(obj) * obj.quantity
+
+# Сериализатор контактов
+class ContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contact
+        fields = ['id', 'type', 'value']
+        read_only_fields = ['id']
