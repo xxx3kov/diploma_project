@@ -12,6 +12,7 @@ import yaml
 from backend.models import (
     Category,
     Order,
+    OrderItem,
     Parameter,
     Product,
     ProductInfo,
@@ -92,9 +93,6 @@ class LoginAccountView(APIView):
         user = authenticate(request, email=email, password=password)
         if user is not None:
             token, _ = Token.objects.get_or_create(user=user)
-            print("Email из запроса:", email)
-            print("Пароль из запроса:", password)
-            print("Что вернул authenticate:", user)
             return JsonResponse({"Status": True, "Token": token.key})
         return JsonResponse(
             {"Status": False, "Errors": "Неверный логин или пароль"}, status=403
@@ -121,3 +119,33 @@ class CartView(APIView):
         items = cart.ordered_items.all()
         serializer = OrderItemSerializer(items, many=True)
         return JsonResponse({"Cart": serializer.data})
+
+    def post(self, request):
+        items = request.data.get("items")
+
+        if not items or not isinstance(items, list):
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": 'Необходим список товаров в формате [{"product_id": 1, "shop_id": 1, "quantity": 1}]',
+                },
+                status=400,
+            )
+
+        cart, _ = Order.objects.get_or_create(user=request.user, status="new")
+
+        added_count = 0
+        for item in items:
+            product_id = item.get("product_id")
+            shop_id = item.get("shop_id")
+            quantity = item.get("quantity")
+
+            if product_id and shop_id and quantity:
+                OrderItem.objects.update_or_create(
+                    order=cart,
+                    product_id=product_id,
+                    defaults={"shop_id": shop_id, "quantity": quantity},
+                )
+                added_count += 1
+
+        return JsonResponse({"Status": True, "Added_items_count": added_count})
