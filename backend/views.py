@@ -29,12 +29,6 @@ from backend.models import (
     Shop,
     User,
 )
-from backend.serializers import (
-    OrderItemSerializer,
-    ProductInfoSerializer,
-    UserSerializer,
-)
-
 
 class PartnerUpdateView(APIView):
     def post(self, request):
