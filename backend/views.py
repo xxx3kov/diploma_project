@@ -6,6 +6,7 @@ from backend.serializers import (
     OrderSerializer,
 )
 from django.contrib.auth import authenticate
+from django.core.mail import send_mail
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
@@ -84,6 +85,19 @@ class PartnerUpdateView(APIView):
 class RegisterAccountView(CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+
+        send_mail(
+            subject="Подтверждение регистрации",
+            message=(
+                f"Здравствуйте, {user.first_name}!\n\n"
+                "Ваша регистрация успешно завершена."
+            ),
+            from_email=None,
+            recipient_list=[user.email],
+        )
 
 
 class LoginAccountView(APIView):
@@ -305,7 +319,17 @@ class ConfirmOrderView(APIView):
         cart.contact = contact
         cart.status = Order.Status.CONFIRMED
         cart.save(update_fields=["contact", "status"])
-
+        send_mail(
+            subject="Заказ подтверждён",
+            message=(
+                f"Здравствуйте, {request.user.first_name}!\n\n"
+                f"Ваш заказ №{cart.id} подтверждён.\n"
+                f"Адрес доставки: {contact.address}, "
+                f"{contact.city}, ул. {contact.street}, дом {contact.house}."
+            ),
+            from_email=None,
+            recipient_list=[contact.email],
+        )
         return JsonResponse(
             {
                 "Status": True,
