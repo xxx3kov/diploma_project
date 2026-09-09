@@ -1,3 +1,10 @@
+from backend.serializers import (
+    OrderItemSerializer,
+    ProductInfoSerializer,
+    UserSerializer,
+    ContactSerializer,
+    OrderSerializer,
+)
 from django.contrib.auth import authenticate
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
@@ -11,6 +18,7 @@ import yaml
 
 from backend.models import (
     Category,
+    Contact,
     Order,
     OrderItem,
     Parameter,
@@ -174,3 +182,143 @@ class CartView(APIView):
                 deleted_count += 1
 
         return JsonResponse({"Status": True, "Deleted_items_count": deleted_count})
+
+
+class ContactView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        contacts = Contact.objects.filter(user=request.user)
+        serializer = ContactSerializer(contacts, many=True)
+
+        return JsonResponse({"Contacts": serializer.data})
+
+    def post(self, request):
+        serializer = ContactSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+
+            return JsonResponse(
+                {
+                    "Status": True,
+                    "Contact": serializer.data,
+                },
+                status=201,
+            )
+
+        return JsonResponse(
+            {
+                "Status": False,
+                "Errors": serializer.errors,
+            },
+            status=400,
+        )
+
+    def delete(self, request):
+        contact_id = request.data.get("id")
+
+        if not contact_id:
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": "Не указан ID контакта",
+                },
+                status=400,
+            )
+
+        deleted, _ = Contact.objects.filter(
+            id=contact_id,
+            user=request.user,
+        ).delete()
+
+        if not deleted:
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": "Контакт не найден",
+                },
+                status=404,
+            )
+
+        return JsonResponse(
+            {
+                "Status": True,
+            }
+        )
+
+
+class ConfirmOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        cart_id = request.data.get("cart_id")
+        contact_id = request.data.get("contact_id")
+
+        if not cart_id or not contact_id:
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": "Необходимо указать ID корзины и ID контакта",
+                },
+                status=400,
+            )
+
+        try:
+            cart = Order.objects.get(
+                id=cart_id,
+                user=request.user,
+                status=Order.Status.NEW,
+            )
+        except Order.DoesNotExist:
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": "Корзина не найдена",
+                },
+                status=404,
+            )
+
+        try:
+            contact = Contact.objects.get(
+                id=contact_id,
+                user=request.user,
+            )
+        except Contact.DoesNotExist:
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": "Контакт не найден",
+                },
+                status=404,
+            )
+
+        if not cart.ordered_items.exists():
+            return JsonResponse(
+                {
+                    "Status": False,
+                    "Errors": "Нельзя подтвердить пустую корзину",
+                },
+                status=400,
+            )
+
+        cart.contact = contact
+        cart.status = Order.Status.CONFIRMED
+        cart.save(update_fields=["contact", "status"])
+
+        return JsonResponse(
+            {
+                "Status": True,
+                "Order": OrderSerializer(cart).data,
+            }
+        )
+
+
+class OrderListView(ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).exclude(
+            status=Order.Status.NEW
+        )
