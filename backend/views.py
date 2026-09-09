@@ -6,11 +6,12 @@ from rest_framework.authtoken.models import Token
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 import yaml
 
 from backend.models import (
     Category,
+    Order,
     Parameter,
     Product,
     ProductInfo,
@@ -18,7 +19,11 @@ from backend.models import (
     Shop,
     User,
 )
-from backend.serializers import ProductInfoSerializer, UserSerializer
+from backend.serializers import (
+    OrderItemSerializer,
+    ProductInfoSerializer,
+    UserSerializer,
+)
 
 
 class PartnerUpdateView(APIView):
@@ -103,3 +108,16 @@ class ProductInfoView(ListAPIView):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["name", "product__name", "shop__name"]
     filterset_fields = ["shop_id", "product__category_id"]
+
+
+class CartView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        cart = Order.objects.filter(user=request.user, status="new").first()
+
+        if not cart:
+            return JsonResponse({"Cart": []})
+        items = cart.ordered_items.all()
+        serializer = OrderItemSerializer(items, many=True)
+        return JsonResponse({"Cart": serializer.data})

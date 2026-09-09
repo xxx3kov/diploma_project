@@ -51,3 +51,21 @@ class ProductInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductInfo
         fields = ["name", "quantity", "price", "shop", "product", "product_parameters"]
+
+
+# Сериализатор корзины
+class OrderItemSerializer(serializers.ModelSerializer):
+    total_sum = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    product = serializers.StringRelatedField()
+    shop = serializers.StringRelatedField()
+
+    class Meta:
+        model = OrderItem
+        fields = ['product', 'shop', 'price', 'quantity', 'total_sum']
+
+    def get_price(self, obj):
+        return ProductInfo.objects.get(shop=obj.shop, product=obj.product).price
+
+    def get_total_sum(self, obj):
+        return self.get_price(obj) * obj.quantity
