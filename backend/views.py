@@ -149,3 +149,28 @@ class CartView(APIView):
                 added_count += 1
 
         return JsonResponse({"Status": True, "Added_items_count": added_count})
+
+    def delete(self, request):
+        items = request.data.get("items")
+        if not items:
+            return JsonResponse(
+                {"Status": False, "Errors": "Не переданы ID товаров для удаления"},
+                status=400,
+            )
+        if isinstance(items, str):
+            items = items.split(",")
+        cart = Order.objects.filter(user=request.user, status="new").first()
+
+        if not cart:
+            return JsonResponse(
+                {"Status": False, "Errors": "Корзина не найдена или пуста"}, status=404
+            )
+        deleted_count = 0
+        for item_id in items:
+            deleted, _ = OrderItem.objects.filter(
+                order=cart, product_id=item_id
+            ).delete()
+            if deleted:
+                deleted_count += 1
+
+        return JsonResponse({"Status": True, "Deleted_items_count": deleted_count})
