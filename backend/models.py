@@ -46,6 +46,10 @@ class User(AbstractUser):
 
     username = None
     email = models.EmailField(unique=True)
+    is_supplier = models.BooleanField(
+        default=False,
+        verbose_name="Поставщик",
+    )
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = UserManager()
