@@ -5,6 +5,7 @@ from backend.views import (
     ConfirmOrderView,
     ContactView,
     LoginAccountView,
+    OrderDetailView,
     OrderListView,
     PartnerUpdateView,
     ProductInfoView,
@@ -51,5 +52,10 @@ urlpatterns = [
         "orders/",
         OrderListView.as_view(),
         name="orders",
+    ),
+    path(
+        "orders/<int:pk>/",
+        OrderDetailView.as_view(),
+        name="order-detail",
     ),
 ]
