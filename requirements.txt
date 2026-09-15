@@ -2,5 +2,7 @@ asgiref==3.12.1
 Django==6.1.1
 django-filter==26.1
 djangorestframework==3.18.0
+python-dotenv==1.2.3
 PyYAML==6.0.3
+ruff==0.16.7
 sqlparse==0.6.0
