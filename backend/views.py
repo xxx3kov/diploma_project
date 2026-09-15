@@ -1,5 +1,6 @@
 from backend.permissions import IsSupplier
 from backend.serializers import (
+    OrderDetailSerializer,
     OrderItemSerializer,
     ProductInfoSerializer,
     UserSerializer,
@@ -13,7 +14,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -349,4 +350,23 @@ class OrderListView(ListAPIView):
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user).exclude(
             status=Order.Status.NEW
+        )
+
+
+class OrderDetailView(RetrieveAPIView):
+    serializer_class = OrderDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Order.objects.filter(
+                user=self.request.user,
+            )
+            .exclude(
+                status=Order.Status.NEW,
+            )
+            .prefetch_related(
+                "ordered_items__product",
+                "ordered_items__shop",
+            )
         )
