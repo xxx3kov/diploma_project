@@ -1,3 +1,4 @@
+from backend.permissions import IsSupplier
 from backend.serializers import (
     OrderItemSerializer,
     ProductInfoSerializer,
@@ -15,6 +16,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 import yaml
 
 from backend.models import (
@@ -30,45 +32,53 @@ from backend.models import (
     User,
 )
 
+
 class PartnerUpdateView(APIView):
+    permission_classes = [IsSupplier]
+
     def post(self, request):
+        file = request.FILES.get("file")
+
+        if not file:
+            return Response(
+                {"Status": False, "Errors": "Файл не загружен"},
+                status=400,
+            )
+
         try:
             with transaction.atomic():
-                with open("data/shop1.yaml", "r", encoding="utf-8") as f:
-                    data = yaml.safe_load(f)
-                    shop, _ = Shop.objects.update_or_create(name=data["shop"])
+                data = yaml.safe_load(file.read().decode("utf-8"))
+                shop, _ = Shop.objects.update_or_create(name=data["shop"])
 
-                    for category_data in data["categories"]:
-                        category, _ = Category.objects.update_or_create(
-                            id=category_data["id"],
-                            defaults={"name": category_data["name"]},
-                        )
-                        category.shops.add(shop)
+                for category_data in data["categories"]:
+                    category, _ = Category.objects.update_or_create(
+                        id=category_data["id"],
+                        defaults={"name": category_data["name"]},
+                    )
+                    category.shops.add(shop)
 
-                    for item in data["goods"]:
-                        product, _ = Product.objects.update_or_create(
-                            name=item["model"], category_id=item["category"]
-                        )
-                        product_info, _ = ProductInfo.objects.update_or_create(
-                            product=product,
-                            shop=shop,
-                            name=item["name"],
-                            defaults={
-                                "quantity": item["quantity"],
-                                "price": item["price"],
-                                "price_rrc": item["price_rrc"],
-                            },
-                        )
+                for item in data["goods"]:
+                    product, _ = Product.objects.update_or_create(
+                        name=item["model"], category_id=item["category"]
+                    )
+                    product_info, _ = ProductInfo.objects.update_or_create(
+                        product=product,
+                        shop=shop,
+                        name=item["name"],
+                        defaults={
+                            "quantity": item["quantity"],
+                            "price": item["price"],
+                            "price_rrc": item["price_rrc"],
+                        },
+                    )
 
-                        for name, value in item["parameters"].items():
-                            parameter_obj, _ = Parameter.objects.get_or_create(
-                                name=name
-                            )
-                            ProductParameter.objects.update_or_create(
-                                product_info=product_info,
-                                parameter=parameter_obj,
-                                defaults={"value": str(value)},
-                            )
+                    for name, value in item["parameters"].items():
+                        parameter_obj, _ = Parameter.objects.get_or_create(name=name)
+                        ProductParameter.objects.update_or_create(
+                            product_info=product_info,
+                            parameter=parameter_obj,
+                            defaults={"value": str(value)},
+                        )
 
             return JsonResponse({"Status": True})
 
