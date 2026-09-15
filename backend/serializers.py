@@ -151,3 +151,39 @@ class OrderSerializer(serializers.ModelSerializer):
             total += price * item.quantity
 
         return total
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    number = serializers.IntegerField(source="id", read_only=True)
+    date = serializers.DateTimeField(source="dt", read_only=True)
+    total_sum = serializers.SerializerMethodField()
+    items = OrderItemSerializer(
+        source="ordered_items",
+        many=True,
+        read_only=True,
+    )
+
+    class Meta:
+        model = Order
+        fields = [
+            "number",
+            "date",
+            "status",
+            "total_sum",
+            "items",
+        ]
+
+    def get_total_sum(self, obj):
+        total = 0
+
+        for item in obj.ordered_items.all():
+            try:
+                price = ProductInfo.objects.get(
+                    product=item.product,
+                    shop=item.shop,
+                ).price
+            except ProductInfo.DoesNotExist:
+                price = 0
+
+            total += price * item.quantity
+
+        return total
