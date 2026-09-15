@@ -11,7 +11,6 @@ from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
@@ -81,10 +80,10 @@ class PartnerUpdateView(APIView):
                             defaults={"value": str(value)},
                         )
 
-            return JsonResponse({"Status": True})
+            return Response({"Status": True})
 
         except Exception as e:
-            return JsonResponse({"Status": False, "Errors": str(e)}, status=400)
+            return Response({"Status": False, "Errors": str(e)}, status=400)
 
 
 class RegisterAccountView(CreateAPIView):
@@ -113,15 +112,15 @@ class LoginAccountView(APIView):
         password = request.data.get("password")
 
         if not email or not password:
-            return JsonResponse(
+            return Response(
                 {"Status": False, "Errors": "Нужно заполнить все поля"}, status=400
             )
 
         user = authenticate(request, email=email, password=password)
         if user is not None:
             token, _ = Token.objects.get_or_create(user=user)
-            return JsonResponse({"Status": True, "Token": token.key})
-        return JsonResponse(
+            return Response({"Status": True, "Token": token.key})
+        return Response(
             {"Status": False, "Errors": "Неверный логин или пароль"}, status=403
         )
 
@@ -142,16 +141,16 @@ class CartView(APIView):
         cart = Order.objects.filter(user=request.user, status="new").first()
 
         if not cart:
-            return JsonResponse({"Cart": []})
+            return Response({"Cart": []})
         items = cart.ordered_items.all()
         serializer = OrderItemSerializer(items, many=True)
-        return JsonResponse({"Cart": serializer.data})
+        return Response({"Cart": serializer.data})
 
     def post(self, request):
         items = request.data.get("items")
 
         if not items or not isinstance(items, list):
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": 'Необходим список товаров в формате [{"product_id": 1, "shop_id": 1, "quantity": 1}]',
@@ -175,12 +174,12 @@ class CartView(APIView):
                 )
                 added_count += 1
 
-        return JsonResponse({"Status": True, "Added_items_count": added_count})
+        return Response({"Status": True, "Added_items_count": added_count})
 
     def delete(self, request):
         items = request.data.get("items")
         if not items:
-            return JsonResponse(
+            return Response(
                 {"Status": False, "Errors": "Не переданы ID товаров для удаления"},
                 status=400,
             )
@@ -189,7 +188,7 @@ class CartView(APIView):
         cart = Order.objects.filter(user=request.user, status="new").first()
 
         if not cart:
-            return JsonResponse(
+            return Response(
                 {"Status": False, "Errors": "Корзина не найдена или пуста"}, status=404
             )
         deleted_count = 0
@@ -200,7 +199,7 @@ class CartView(APIView):
             if deleted:
                 deleted_count += 1
 
-        return JsonResponse({"Status": True, "Deleted_items_count": deleted_count})
+        return Response({"Status": True, "Deleted_items_count": deleted_count})
 
 
 class ContactView(APIView):
@@ -210,7 +209,7 @@ class ContactView(APIView):
         contacts = Contact.objects.filter(user=request.user)
         serializer = ContactSerializer(contacts, many=True)
 
-        return JsonResponse({"Contacts": serializer.data})
+        return Response({"Contacts": serializer.data})
 
     def post(self, request):
         serializer = ContactSerializer(data=request.data)
@@ -218,7 +217,7 @@ class ContactView(APIView):
         if serializer.is_valid():
             serializer.save(user=request.user)
 
-            return JsonResponse(
+            return Response(
                 {
                     "Status": True,
                     "Contact": serializer.data,
@@ -226,7 +225,7 @@ class ContactView(APIView):
                 status=201,
             )
 
-        return JsonResponse(
+        return Response(
             {
                 "Status": False,
                 "Errors": serializer.errors,
@@ -238,7 +237,7 @@ class ContactView(APIView):
         contact_id = request.data.get("id")
 
         if not contact_id:
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": "Не указан ID контакта",
@@ -252,7 +251,7 @@ class ContactView(APIView):
         ).delete()
 
         if not deleted:
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": "Контакт не найден",
@@ -260,7 +259,7 @@ class ContactView(APIView):
                 status=404,
             )
 
-        return JsonResponse(
+        return Response(
             {
                 "Status": True,
             }
@@ -275,7 +274,7 @@ class ConfirmOrderView(APIView):
         contact_id = request.data.get("contact_id")
 
         if not cart_id or not contact_id:
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": "Необходимо указать ID корзины и ID контакта",
@@ -290,7 +289,7 @@ class ConfirmOrderView(APIView):
                 status=Order.Status.NEW,
             )
         except Order.DoesNotExist:
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": "Корзина не найдена",
@@ -304,7 +303,7 @@ class ConfirmOrderView(APIView):
                 user=request.user,
             )
         except Contact.DoesNotExist:
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": "Контакт не найден",
@@ -313,7 +312,7 @@ class ConfirmOrderView(APIView):
             )
 
         if not cart.ordered_items.exists():
-            return JsonResponse(
+            return Response(
                 {
                     "Status": False,
                     "Errors": "Нельзя подтвердить пустую корзину",
@@ -335,7 +334,7 @@ class ConfirmOrderView(APIView):
             from_email=None,
             recipient_list=[contact.email],
         )
-        return JsonResponse(
+        return Response(
             {
                 "Status": True,
                 "Order": OrderSerializer(cart).data,
