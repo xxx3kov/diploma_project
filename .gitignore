@@ -35,4 +35,8 @@ dist/
 # Jupyter
 .ipynb_checkpoints/
 
+# Ruff
+.ruff_cache/
+
+# Database
 db.sqlite3
