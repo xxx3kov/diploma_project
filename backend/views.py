@@ -1,12 +1,4 @@
-from backend.permissions import IsSupplier
-from backend.serializers import (
-    OrderDetailSerializer,
-    OrderItemSerializer,
-    ProductInfoSerializer,
-    UserSerializer,
-    ContactSerializer,
-    OrderSerializer,
-)
+import yaml
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.db import transaction
@@ -14,10 +6,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authtoken.models import Token
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
-from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-import yaml
+from rest_framework.views import APIView
 
 from backend.models import (
     Category,
@@ -29,7 +20,15 @@ from backend.models import (
     ProductInfo,
     ProductParameter,
     Shop,
-    User,
+)
+from backend.permissions import IsSupplier
+from backend.serializers import (
+    ContactSerializer,
+    OrderDetailSerializer,
+    OrderItemSerializer,
+    OrderSerializer,
+    ProductInfoSerializer,
+    UserSerializer,
 )
 
 

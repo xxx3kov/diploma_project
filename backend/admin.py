@@ -1,17 +1,16 @@
-from django.contrib import admin
-
 # Register your models here.
 from django.contrib import admin
+
 from backend.models import (
-    Shop,
     Category,
-    Product,
-    ProductInfo,
-    Parameter,
-    ProductParameter,
     Contact,
     Order,
     OrderItem,
+    Parameter,
+    Product,
+    ProductInfo,
+    ProductParameter,
+    Shop,
 )
 
 admin.site.register(Shop)

@@ -1,14 +1,12 @@
 from rest_framework import serializers
+
 from .models import (
-    Shop,
-    Category,
-    Product,
-    ProductInfo,
-    Parameter,
-    ProductParameter,
     Contact,
     Order,
     OrderItem,
+    ProductInfo,
+    ProductParameter,
+    Shop,
     User,
 )
 
@@ -151,6 +149,7 @@ class OrderSerializer(serializers.ModelSerializer):
             total += price * item.quantity
 
         return total
+
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     number = serializers.IntegerField(source="id", read_only=True)
