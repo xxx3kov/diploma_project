@@ -35,7 +35,9 @@ from backend.serializers import (
     OrderDetailSerializer,
     OrderItemSerializer,
     OrderSerializer,
+    ProductDetailSerializer,
     ProductInfoSerializer,
+    SupplierOrderSerializer,
     UserSerializer,
 )
 
@@ -438,34 +440,50 @@ class OrderListView(ListAPIView):
         )
 
 
-class OrderDetailView(RetrieveAPIView):
-    serializer_class = OrderDetailSerializer
+class OrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return (
-            Order.objects.filter(
-                user=self.request.user,
+    def get_object(self, request, pk):
+        try:
+            return (
+                Order.objects.filter(
+                    id=pk,
+                    user=request.user,
+                )
+                .exclude(status=Order.Status.NEW)
+                .prefetch_related(
+                    "ordered_items__product",
+                    "ordered_items__shop",
+                )
+                .get()
             )
-            .exclude(
-                status=Order.Status.NEW,
+        except Order.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        order = self.get_object(request, pk)
+
+        if not order:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Заказ не найден",
+                },
+                status=404,
             )
-            .prefetch_related(
-                "ordered_items__product",
-                "ordered_items__shop",
-            )
-        )
+
+        serializer = OrderDetailSerializer(order)
+
+        return Response(serializer.data)
 
 
 class ProductDetailView(RetrieveAPIView):
-    serializer_class = ProductInfoSerializer
+    serializer_class = ProductDetailSerializer
     permission_classes = [AllowAny]
 
-    queryset = ProductInfo.objects.select_related(
-        "product",
-        "shop",
-    ).prefetch_related(
-        "product_parameters__parameter",
+    queryset = Product.objects.prefetch_related(
+        "product_infos__shop",
+        "product_infos__product_parameters__parameter",
     )
 
 
@@ -587,12 +605,123 @@ class SupplierOrderAcceptanceView(APIView):
                 status=400,
             )
 
-        request.user.accepts_orders = accepts_orders
-        request.user.save(update_fields=["accepts_orders"])
+        shop = getattr(request.user, "shop", None)
+
+        if shop is None:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "У пользователя нет магазина",
+                },
+                status=400,
+            )
+
+        shop.accepts_orders = accepts_orders
+        shop.save(update_fields=["accepts_orders"])
 
         return Response(
             {
                 "Status": True,
-                "accepts_orders": request.user.accepts_orders,
+                "accepts_orders": shop.accepts_orders,
+            }
+        )
+
+    def get(self, request):
+        shop = getattr(request.user, "shop", None)
+
+        if shop is None:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "У пользователя нет магазина",
+                },
+                status=400,
+            )
+
+        orders = (
+            Order.objects.filter(
+                ordered_items__shop=shop,
+            )
+            .exclude(
+                status=Order.Status.NEW,
+            )
+            .distinct()
+            .prefetch_related(
+                "ordered_items__product",
+                "ordered_items__shop",
+            )
+        )
+
+        for order in orders:
+            order._supplier_items = list(order.ordered_items.filter(shop=shop))
+
+        serializer = SupplierOrderSerializer(
+            orders,
+            many=True,
+        )
+
+        return Response(
+            {
+                "Orders": serializer.data,
+            }
+        )
+
+
+class SupplierOrderStatusView(APIView):
+    permission_classes = [IsSupplier]
+
+    def patch(self, request, pk):
+        shop = getattr(request.user, "shop", None)
+
+        if shop is None:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "У пользователя нет магазина",
+                },
+                status=400,
+            )
+
+        try:
+            order = (
+                Order.objects.filter(
+                    id=pk,
+                    ordered_items__shop=shop,
+                )
+                .distinct()
+                .get()
+            )
+        except Order.DoesNotExist:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Заказ не найден",
+                },
+                status=404,
+            )
+
+        status_value = request.data.get("status")
+
+        valid_statuses = {choice[0] for choice in Order.Status.choices}
+
+        if status_value not in valid_statuses:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": (
+                        "Недопустимый статус заказа. "
+                        f"Допустимые значения: {sorted(valid_statuses)}"
+                    ),
+                },
+                status=400,
+            )
+
+        order.status = status_value
+        order.save(update_fields=["status"])
+        order._supplier_items = list(order.ordered_items.filter(shop=shop))
+        return Response(
+            {
+                "Status": True,
+                "Order": SupplierOrderSerializer(order).data,
             }
         )

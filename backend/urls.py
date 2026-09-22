@@ -8,10 +8,13 @@ from backend.views import (
     OrderDetailView,
     OrderListView,
     PartnerUpdateView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     ProductDetailView,
     ProductInfoView,
     RegisterAccountView,
     SupplierOrderAcceptanceView,
+    SupplierOrderStatusView,
 )
 
 urlpatterns = [
@@ -69,5 +72,20 @@ urlpatterns = [
         "partner/orders/",
         SupplierOrderAcceptanceView.as_view(),
         name="supplier-orders-acceptance",
+    ),
+    path(
+        "user/password-reset/",
+        PasswordResetRequestView.as_view(),
+        name="password-reset-request",
+    ),
+    path(
+        "user/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path(
+        "partner/orders/<int:pk>/",
+        SupplierOrderStatusView.as_view(),
+        name="supplier-order-status",
     ),
 ]
