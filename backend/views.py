@@ -55,7 +55,12 @@ class PartnerUpdateView(APIView):
         try:
             with transaction.atomic():
                 data = yaml.safe_load(file.read().decode("utf-8"))
-                shop, _ = Shop.objects.update_or_create(name=data["shop"])
+                shop, _ = Shop.objects.update_or_create(
+                    name=data["shop"],
+                    defaults={
+                        "supplier": request.user,
+                    },
+                )
 
                 for category_data in data["categories"]:
                     category, _ = Category.objects.update_or_create(
@@ -145,12 +150,17 @@ class CartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        cart = Order.objects.filter(user=request.user, status="new").first()
+        cart = Order.objects.filter(
+            user=request.user,
+            status=Order.Status.NEW,
+        ).first()
 
         if not cart:
             return Response({"Cart": []})
+
         items = cart.ordered_items.all()
         serializer = OrderItemSerializer(items, many=True)
+
         return Response({"Cart": serializer.data})
 
     def post(self, request):
@@ -160,53 +170,122 @@ class CartView(APIView):
             return Response(
                 {
                     "Status": False,
-                    "Errors": 'Необходим список товаров в формате [{"product_id": 1, "shop_id": 1, "quantity": 1}]',
+                    "Errors": (
+                        "Необходим список товаров в формате "
+                        '[{"product_id": 1, "shop_id": 1, "quantity": 1}]'
+                    ),
                 },
                 status=400,
             )
 
-        cart, _ = Order.objects.get_or_create(user=request.user, status="new")
+        cart, _ = Order.objects.get_or_create(
+            user=request.user,
+            status=Order.Status.NEW,
+        )
 
         added_count = 0
+
         for item in items:
             product_id = item.get("product_id")
             shop_id = item.get("shop_id")
             quantity = item.get("quantity")
 
-            if product_id and shop_id and quantity:
-                OrderItem.objects.update_or_create(
-                    order=cart,
-                    product_id=product_id,
-                    defaults={"shop_id": shop_id, "quantity": quantity},
-                )
-                added_count += 1
+            if not product_id or not shop_id or not quantity:
+                continue
 
-        return Response({"Status": True, "Added_items_count": added_count})
+            product_info = (
+                ProductInfo.objects.select_related("shop")
+                .filter(
+                    product_id=product_id,
+                    shop_id=shop_id,
+                )
+                .first()
+            )
+
+            if not product_info:
+                return Response(
+                    {
+                        "Status": False,
+                        "Errors": (
+                            f"Товар {product_id} " f"отсутствует у магазина {shop_id}"
+                        ),
+                    },
+                    status=400,
+                )
+
+            if not product_info.shop.accepts_orders:
+                return Response(
+                    {
+                        "Status": False,
+                        "Errors": ("Поставщик временно " "не принимает заказы"),
+                    },
+                    status=400,
+                )
+
+            OrderItem.objects.update_or_create(
+                order=cart,
+                product_id=product_id,
+                defaults={
+                    "shop_id": shop_id,
+                    "quantity": quantity,
+                },
+            )
+
+            added_count += 1
+
+        return Response(
+            {
+                "Status": True,
+                "Added_items_count": added_count,
+            }
+        )
 
     def delete(self, request):
         items = request.data.get("items")
+
         if not items:
             return Response(
-                {"Status": False, "Errors": "Не переданы ID товаров для удаления"},
+                {
+                    "Status": False,
+                    "Errors": "Не переданы ID товаров для удаления",
+                },
                 status=400,
             )
+
         if isinstance(items, str):
             items = items.split(",")
-        cart = Order.objects.filter(user=request.user, status="new").first()
+
+        cart = Order.objects.filter(
+            user=request.user,
+            status=Order.Status.NEW,
+        ).first()
 
         if not cart:
             return Response(
-                {"Status": False, "Errors": "Корзина не найдена или пуста"}, status=404
+                {
+                    "Status": False,
+                    "Errors": "Корзина не найдена или пуста",
+                },
+                status=404,
             )
+
         deleted_count = 0
+
         for item_id in items:
             deleted, _ = OrderItem.objects.filter(
-                order=cart, product_id=item_id
+                order=cart,
+                product_id=item_id,
             ).delete()
+
             if deleted:
                 deleted_count += 1
 
-        return Response({"Status": True, "Deleted_items_count": deleted_count})
+        return Response(
+            {
+                "Status": True,
+                "Deleted_items_count": deleted_count,
+            }
+        )
 
 
 class ContactView(APIView):

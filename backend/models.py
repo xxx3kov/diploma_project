@@ -63,7 +63,7 @@ class User(AbstractUser):
 
 
 class Shop(models.Model):
-    """Магазин-поставщик."""
+    """Магазин-поставщик товаров."""
 
     supplier = models.OneToOneField(
         User,
@@ -74,17 +74,17 @@ class Shop(models.Model):
         limit_choices_to={"is_supplier": True},
         verbose_name="Поставщик",
     )
-
     name = models.CharField(
         verbose_name="Наименование",
         max_length=50,
         unique=True,
     )
-
     url = models.URLField(
         verbose_name="Ссылка",
-        blank=True,
-        default="",
+    )
+    accepts_orders = models.BooleanField(
+        default=True,
+        verbose_name="Принимает заказы",
     )
 
     class Meta:
