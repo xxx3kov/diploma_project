@@ -46,20 +46,46 @@ class User(AbstractUser):
 
     username = None
     email = models.EmailField(unique=True)
+
     is_supplier = models.BooleanField(
         default=False,
         verbose_name="Поставщик",
     )
+
+    accepts_orders = models.BooleanField(
+        default=True,
+        verbose_name="Принимает заказы",
+    )
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = UserManager()
 
 
 class Shop(models.Model):
-    """Магазин-поставщик товаров."""
+    """Магазин-поставщик."""
 
-    name = models.CharField(verbose_name="Наименование", max_length=50, unique=True)
-    url = models.URLField(verbose_name="Ссылка")
+    supplier = models.OneToOneField(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="shop",
+        limit_choices_to={"is_supplier": True},
+        verbose_name="Поставщик",
+    )
+
+    name = models.CharField(
+        verbose_name="Наименование",
+        max_length=50,
+        unique=True,
+    )
+
+    url = models.URLField(
+        verbose_name="Ссылка",
+        blank=True,
+        default="",
+    )
 
     class Meta:
         verbose_name = "Магазин"

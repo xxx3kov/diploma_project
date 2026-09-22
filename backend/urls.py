@@ -8,8 +8,10 @@ from backend.views import (
     OrderDetailView,
     OrderListView,
     PartnerUpdateView,
+    ProductDetailView,
     ProductInfoView,
     RegisterAccountView,
+    SupplierOrderAcceptanceView,
 )
 
 urlpatterns = [
@@ -57,5 +59,15 @@ urlpatterns = [
         "orders/<int:pk>/",
         OrderDetailView.as_view(),
         name="order-detail",
+    ),
+    path(
+        "products/<int:pk>/",
+        ProductDetailView.as_view(),
+        name="product-detail",
+    ),
+    path(
+        "partner/orders/",
+        SupplierOrderAcceptanceView.as_view(),
+        name="supplier-orders-acceptance",
     ),
 ]

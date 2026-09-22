@@ -1,14 +1,21 @@
 import yaml
 from django.contrib.auth import authenticate
+from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.http import (
+    urlsafe_base64_decode,
+    urlsafe_base64_encode,
+)
+from django.utils.encoding import force_bytes
 from rest_framework.authtoken.models import Token
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 
 from backend.models import (
     Category,
@@ -20,6 +27,7 @@ from backend.models import (
     ProductInfo,
     ProductParameter,
     Shop,
+    User,
 )
 from backend.permissions import IsSupplier
 from backend.serializers import (
@@ -367,4 +375,145 @@ class OrderDetailView(RetrieveAPIView):
                 "ordered_items__product",
                 "ordered_items__shop",
             )
+        )
+
+
+class ProductDetailView(RetrieveAPIView):
+    serializer_class = ProductInfoSerializer
+    permission_classes = [AllowAny]
+
+    queryset = ProductInfo.objects.select_related(
+        "product",
+        "shop",
+    ).prefetch_related(
+        "product_parameters__parameter",
+    )
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Необходимо указать email",
+                },
+                status=400,
+            )
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {
+                    "Status": True,
+                    "Message": "Если пользователь существует, письмо отправлено",
+                }
+            )
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        send_mail(
+            subject="Восстановление пароля",
+            message=(
+                "Для восстановления пароля используйте следующие данные:\n\n"
+                f"uid: {uid}\n"
+                f"token: {token}\n"
+            ),
+            from_email=None,
+            recipient_list=[user.email],
+        )
+
+        return Response(
+            {
+                "Status": True,
+                "Message": "Письмо для восстановления пароля отправлено",
+            }
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+        password = request.data.get("password")
+
+        if not uid or not token or not password:
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Необходимо передать uid, token и password",
+                },
+                status=400,
+            )
+
+        try:
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=user_id)
+        except (
+            User.DoesNotExist,
+            ValueError,
+            TypeError,
+            OverflowError,
+        ):
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Недействительная ссылка восстановления",
+                },
+                status=400,
+            )
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Недействительный или просроченный токен",
+                },
+                status=400,
+            )
+
+        user.set_password(password)
+        user.save(update_fields=["password"])
+
+        Token.objects.filter(user=user).delete()
+
+        return Response(
+            {
+                "Status": True,
+                "Message": "Пароль успешно изменён",
+            }
+        )
+
+
+class SupplierOrderAcceptanceView(APIView):
+    permission_classes = [IsSupplier]
+
+    def post(self, request):
+        accepts_orders = request.data.get("accepts_orders")
+
+        if not isinstance(accepts_orders, bool):
+            return Response(
+                {
+                    "Status": False,
+                    "Errors": "Поле accepts_orders должно быть true или false",
+                },
+                status=400,
+            )
+
+        request.user.accepts_orders = accepts_orders
+        request.user.save(update_fields=["accepts_orders"])
+
+        return Response(
+            {
+                "Status": True,
+                "accepts_orders": request.user.accepts_orders,
+            }
         )
